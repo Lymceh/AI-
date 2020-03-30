@@ -56,133 +56,25 @@ void draw()
 
 void mouseClicked()
 {
-  if (mouseX<width/3 && mouseY<height/3)
-  {
-    if (obj[0] != 'X' && obj[0] != 'O')
-    {
-      obj[0] = pl1[0];
-    } else
-    {
-      i--;
+    // Sanity check that it is actually the player's turn
+    if (i % 2 == 0)
+        {
+        // Calculate tile index
+        int x = floor(mouseX / (width / 3));
+        int y = floor(mouseY / (height / 3));
+        int index = x + (y * 3);
+
+    // Index directly into obj[], instead of hardcoding each tile
+    if (obj[index] == ' '); // Check if empty, rather than not full
+        {
+            obj[index]=pl1[0];
+            // Process turn counter after successfully moving,
+            // instead of after unsuccessful, then again at the end
+            i=i+1;
+            lt--;
+        }
     }
-  }
-  if (mouseX>width/3 && mouseX<2*width/3 && mouseY<height/3)
-  {
-    if (obj[1] != 'X' && obj[1] != 'O')
-    {
-      obj[1] = pl1[0];
-    } else
-    {
-      i--;
-    }
-  }
-  if (mouseX>2*width/3 && mouseX<width && mouseY<height/3)
-  {
-    if (obj[2] != 'X' && obj[2] != 'O')
-    {
-      obj[2] = pl1[0];
-    } else
-    {
-      i--;
-    }
-  }
-  if (mouseX<width/3 && mouseY>height/3 && mouseY<2*height/3)
-  {
-    if (obj[3] != 'X' && obj[3] != 'O')
-    {
-      obj[3] = pl1[0];
-    } else
-    {
-      i--;
-    }
-  }
-  if (mouseX>width/3 && mouseX<2*width/3 && mouseY>height/3 && mouseY<2*height/3)
-  {
-    if (obj[4] != 'X' && obj[4] != 'O')
-    {
-      obj[4] = pl1[i%2];
-    } else
-    {
-      i--;
-    }
-  }
-  if (mouseX>2*width/3 && mouseX<width && mouseY>height/3 && mouseY<2*height/3)
-  {
-    if (obj[5] != 'X' && obj[5] != 'O')
-    {  
-      obj[5] = pl1[i%2];
-    } else
-    {
-      i--;
-    }
-  }
-  if (mouseX<width/3 && mouseY>2*height/3 && mouseY<height)
-  {
-    if (obj[6] != 'X' && obj[6] != 'O')
-    {
-      obj[6] = pl1[0];
-    } else
-    {
-      i--;
-    }
-  }
-  if (mouseX>width/3 && mouseX<2*width/3 && mouseY>2*height/3 && mouseY<height)
-  {
-    if (obj[7] != 'X' && obj[7] != 'O')
-    {
-      obj[7] = pl1[0];
-    } else
-    {
-      i--;
-    }
-  }
-  if (mouseX>2*width/3 && mouseX<width && mouseY>2*height/3 && mouseY<height)
-  {
-    if (obj[8] != 'X' && obj[8] != 'O')
-    {
-      //
-      obj[8] = pl1[0];
-    } else
-    {
-      i--;
-    }
-  }
-  i=i+1;
-  lt--;
 }
-
-
-//void opponent()
-//{
-//  if (i%2==1)
-//  {  int[] avl = new int[0];
-//    for (int a=0; a<=8; a++)
-//    {
-  
-//      if (obj[a]!='O' && obj[a]!='X')
-//      {
-//        avl = append(avl, a);
-//        //avl = append(avl, a);
-  
-//        //tmp = a;
-//        //avl[a] = tmp;
-//      }
-//    }
-//    lf = avl.length;
-//    if (avl.length>=1)
-//    {
-//      rm1 = int(random(avl.length));
-  
-//      obj[int(avl[rm1])] = pl1[1];
-  
-//      i++;
-//    } else
-//    {
-//      noLoop();
-//      println("THE END");
-//    }
-//  }
-//}
 
 void opponent()
 {
@@ -190,14 +82,18 @@ void opponent()
   {  
     int bestscore = -11;
     int move = 0;
-    int[] avl = new int[0];
+    // int[] avl = new int[0]; // This line is irrelevant, possible memory leak?
+
+    // This could be refactored into minimax(), but this works well enough, I guess
     for (int a=0; a<=8; a++)
     {
   
       if (obj[a]!='O' && obj[a]!='X')
       {
         obj[a] = pl1[1];
+        lt--; // Decrement lt so that it's considered by checkWinner()
         int score = minimax(0, false);
+        lt++; // Undo decrement of lt
         obj[a] = ' ';
         if (score > bestscore)
         {
@@ -206,77 +102,93 @@ void opponent()
         }
       }
     }
-    obj[move] = pl1[1];
-    i++;
-    lt--;
-  //  lf = avl.length;
-  //  if (avl.length>=1)
-  //  {
-  //    rm1 = int(random(avl.length));
-  
-  //    obj[int(avl[rm1])] = pl1[1];
-  
-  //    i++;
-  //  } else
-  //  {
-  //    noLoop();
-  //    println("THE END");
-  //  }
+    // Sanity check that a move has actually been found
+    if (bestscore == -11 || bestscore == 11)
+    {
+        // Error!
+
+    }
+    else
+    {
+        obj[move] = pl1[1];
+        i++;
+        lt--;
+
+        // This is block should fix the reported issue.
+        // As opponent() is called at the end of draw(), redrawing the
+        // window after a move should ensure it's updated
+        redraw();
+        // As checkWinner() triggers noLoop() whenever it reaches a terminal state,
+        // loop() needs to be called if the game is continuing. Really, it would
+        // be better to only call noLoop() when the game is actually over, but
+        // this should be a decent workaround
+        if (lt > 0)
+        {
+            loop();
+        }
+    }
   }
 }
 
 char checkWinner()
 {
   rs = ' ';
+
+  // This is a problem; lt is only modified when a move is executed,
+  // so when the AI is checking for a tie, lt is never 0.
+  // Easy workaround, modify lt as the AI is picking moves
   if (lt == 0)
   {
     noLoop();
     rs ='t';
   }
+
+  // If A == B and B == C, no need to check A == C
+  
   // first column
-  if(obj[0]==obj[1] && obj[1]==obj[2] && obj[0] == obj[2] && obj[0]!=' ')
+  if(obj[0]==obj[1] && obj[1]==obj[2] && obj[0]!=' ')
   {
     noLoop();
     rs =obj[0];
   }
   // second column
-  if(obj[3]==obj[4] && obj[4]==obj[5] && obj[3] == obj[5] && obj[3]!=' ')
+  if(obj[3]==obj[4] && obj[4]==obj[5] && obj[3]!=' ')
   {
     noLoop();
     rs =obj[3];
   }
   // third column
-  if(obj[6]==obj[7] && obj[7]==obj[8] && obj[6] == obj[8] && obj[6]!=' ')
+  if(obj[6]==obj[7] && obj[7]==obj[8] && obj[6]!=' ')
   {
     noLoop();
     rs =obj[6];
   }
   // first row
-  if(obj[0]==obj[3] && obj[3]==obj[6] && obj[0] == obj[6] && obj[0]!=' ')
+  if(obj[0]==obj[3] && obj[3]==obj[6] && obj[0]!=' ')
   {
     noLoop();
     rs =obj[0];
   }
   // second row
-  if(obj[1]==obj[4] && obj[4]==obj[7] && obj[1] == obj[7] && obj[1]!=' ')
+  if(obj[1]==obj[4] && obj[4]==obj[7] && obj[1]!=' ')
   {
     noLoop();
     rs =obj[1];
   }
   // third row
-  if(obj[2]==obj[5] && obj[5]==obj[8] && obj[2] == obj[8] && obj[2]!=' ')
+  if(obj[2]==obj[5] && obj[5]==obj[8] && obj[2]!=' ')
   {
     noLoop();
     rs =obj[2];
   }
   // right diagonal
-  if(obj[0]==obj[4] && obj[4]==obj[8] && obj[0] == obj[8] && obj[0]!=' ')
+  if(obj[0]==obj[4] && obj[4]==obj[8] && obj[0]!=' ')
   {
     noLoop();
     rs =obj[0];
   }
   // left diagonal
-  if(obj[2]==obj[4] && obj[4]==obj[6] && obj[2] == obj[6] && obj[2]!=' ')
+  if(obj[2]==obj[4] && obj[4]==obj[6] && obj[2]!=' ')
   {
     noLoop();
     rs =obj[2];
@@ -309,7 +221,9 @@ int minimax(int depth ,boolean isMaximising)
       if (obj[a]!='O' && obj[a]!='X')
       {
         obj[a] = pl1[1];
+        lt--; // Decrement lt so that it's considered by checkWinner()
         int score = minimax(depth+1, false);
+        lt++; // Undo decrement of lt
         obj[a] = ' ';
         bestscore = max(score, bestscore);
       }
@@ -326,7 +240,9 @@ int minimax(int depth ,boolean isMaximising)
       if (obj[a]!='O' && obj[a]!='X')
       {
         obj[a] = pl1[0];
+        lt--; // Decrement lt so that it's considered by checkWinner()
         int score = minimax(depth+1, true);
+        lt++; // Undo decrement of lt
         obj[a] = ' ';
         bestscore = min(score, bestscore);
       }
@@ -334,8 +250,4 @@ int minimax(int depth ,boolean isMaximising)
     return bestscore;
     
   }
-
-
-
-
 }
